@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+#import csv
 
 xy = -20 + 50 * np.random.uniform(size=(10000, 2))
 
@@ -17,7 +18,6 @@ def make_chevron(angle, spacing, radius):
         [2*spacing*cos_angle, 2*spacing*sin_angle, radius]  # second diagonal circle
     ]
     return circles
-
 
 def make_circles(angle, spacing, radius):
     """
@@ -47,38 +47,34 @@ def make_circles_H(angle, spacing, radius, number):
             circles.append([(counter+1)*spacing, 0, radius])
             circles.append([(counter+1) * cos_angle * spacing, (counter+1) * spacing * sin_angle, radius])
             counter +=1
-    else:
-        while (counter < ((number +1) / 2)):
-            circles.append([counter * spacing, 0, radius])
-            circles.append([sin_angle * spacing, cos_angle * spacing * counter, radius])
-            counter +=1
+    
     return circles
 
+def make_bucket_2top(angle, spacing, radius, number):
+    cos_angle = np.cos(angle * np.pi/180)
+    sin_angle = np.sin(angle * np.pi/180)
+    counter = 1
+    circles = []
+    circles.append([0,0,radius])
+    while (counter < (number - 2)):
+        circles.append([counter * spacing, 0, radius])
+        counter +=1
+    circles.append([-sin_angle * spacing, cos_angle * spacing, radius])
+    circles.append([(number -3) * spacing + sin_angle * spacing, cos_angle * spacing, radius])
+    return circles
 
-# def count_overlap(x, y, circles):
-#     """
-#     Counts how many circles are overlapping at x, y
-#     Arguments:
-#         x: real number
-#         y: real number
-#         cicles: list of [x_position, y_position, radius] triplets
-    
-#     Returns:
-#         count: integer, number of overlapping circles at x, 
-        
-#     This code will be slooooooow af, but goor for learning. 
-#     Below is a waaay faster function# that processes multiple
-#     points in parallel.
-#     """
-#     count = 0 # running count of cirles overlapping x, y
-    
-#     for (x_i, y_i, r_i) in circles: # check each cicle
-        
-#         if (x - x_i)**2 + (y - y_i)**2 < r_i**2: 
-            
-#             count = count + 1
-            
-#     return count
+def make_bucket_2bot(angle, spacing, radius, number):
+    cos_angle = np.cos(angle * np.pi/180)
+    sin_angle = np.sin(angle * np.pi/180)
+    counter = 1
+    circles = []
+    circles.append([0,0,radius])
+    circles.append([spacing, 0, radius])
+    while (counter < ((number - 2)/2)+1):
+        circles.append([counter * -1* sin_angle * spacing, counter * cos_angle * spacing, radius])
+        circles.append([spacing + (counter * sin_angle * spacing), counter * cos_angle * spacing, radius])
+        counter+=1
+    return circles
 
 def count_overlaps_fast(xy, circles):
     """
@@ -119,7 +115,7 @@ def count_overlaps_fast(xy, circles):
 
 def plot_points_and_circles(circles):
     # plot points, circles
-    fig, ax = plt.subplots(figsize=(10, 10))
+    fig, ax = plt.subplots()
     counts = count_overlaps_fast(xy, circles)
     triple_mask = counts > 2
     ax.scatter(xy[~triple_mask, 0], xy[~triple_mask, 1], alpha=0.1)
@@ -184,9 +180,9 @@ def check_triple_and_angles(xy, circles, max_angle=180):
     
     return xy_type
 
-def plot_points_types(circles):
-    # plot points, circles
-    fig, ax = plt.subplots(figsize=(10, 10))
+def plot_points_types(circles, plot=True):
+    #plot points, circles
+    
     circles = np.array(circles)
     min_x = (circles[:, 0] - circles[:, 2]).min()
     max_x = (circles[:, 0] + circles[:, 2]).max()
@@ -198,17 +194,21 @@ def plot_points_types(circles):
     types = check_triple_and_angles(xy, circles)
     green_area = (np.mean(types==2))*(max_x - min_x)*(max_y-min_y)
     orange_area = (np.mean(types==1))*(max_x - min_x)*(max_y-min_y) + green_area
-    ax.set_title("orange area:"+str(orange_area)+", green area:"+ str(green_area))
-    ax.set_aspect("equal")
-    for t in np.unique(types):
-        mask = t == types
-        alpha = [0.1, 0.1, 1][int(t)]
-        ax.scatter(xy[mask, 0], xy[mask, 1], alpha=alpha)
+    
+    if (plot != False):
+        fig, ax = plt.subplots(figsize=(10, 10))
+        ax.set_title("orange area:"+str(orange_area)+", green area:"+ str(green_area))
+        ax.set_aspect("equal")
+        #ax.legend((str(orange_area), str(green_area)),('orange area', 'green area'))
+        for t in np.unique(types):
+            mask = t == types
+            alpha = [0.1, 0.1, 1][int(t)]
+            ax.scatter(xy[mask, 0], xy[mask, 1], alpha=alpha)
         if np.sum(mask)==0: ax.scatter(0, 0, alpha=0)
-    # add each circle to the plot
-    for c in circles:
-        circle_plot_object = plt.Circle(c[:2], c[2], color='r', alpha=0.1)
-        ax.add_artist(circle_plot_object)
+        #add each circle to the plot
+        for c in circles:
+            circle_plot_object = plt.Circle(c[:2], c[2], color='r', alpha=0.1)
+            ax.add_artist(circle_plot_object)
     
     return green_area, orange_area
 
@@ -284,7 +284,114 @@ def Kill_Grid(spacing, radius, nx, ny):
             
     return circles
 
+#results = []
+min_test_angle_bucket = 0
+max_test_angle_bucket = 31
+min_test_angle_chevron = 60
+max_test_angle_chevron = 121
+test_angle_step = 30
+min_spacing = 0.5
+max_spacing = 1.1
+spacing_step = 0.25
 
+
+
+test_angles_chevron = np.arange(min_test_angle_chevron, max_test_angle_chevron, step=test_angle_step)
+test_angles_buckets = np.arange(min_test_angle_bucket, max_test_angle_bucket, step=test_angle_step)
+test_spacings = np.arange(min_spacing, max_spacing, step=spacing_step)
+
+print(test_angles_chevron)
+print(test_spacings)
+
+def RunTest(testingangles, testingspacings, nobuoys, run):
+    angles = []
+    spacings = []
+    greens = []
+    oranges = []
+    for i in testingangles:
+        print("run %i" %run)
+        print(i)
+        for j in testingspacings:
+            print(j)
+            if (run == 1) or (run == 2):
+                green, orange = plot_points_types(make_bucket_2top(i, j, 1, nobuoys))
+            elif (run == 3):
+                green, orange = plot_points_types(make_bucket_2bot(i, j, 1, nobuoys), False)
+            elif (run == 4) or (run == 5):
+                green, orange = plot_points_types(make_circles_H(i, j, 1, nobuoys))
+            angles.append(i)
+            spacings.append(j)
+            greens.append(green)
+            oranges.append(orange)
+
+    counter = 0
+    if (run == 1):
+        tit = "Standard bucket 4 buoy"
+    elif (run ==2):
+        tit = "Standard bucket 6 buoy passive tacgem"
+    elif (run == 3):
+        tit = "Elongated bucket 6 buoy"
+    elif (run == 4):
+        tit = "7 buoy chevron passive tacgem"
+    elif (run == 5):
+        tit = "7 buoy chevron"
+    with open(tit + '.txt', 'w') as writer:
+        while (counter < len(angles)):
+        #results += str(angles[counter]) & "," & str(spacings[counter]) & "," & str(greens[counter]) & "\n"
+            writer.write(str(angles[counter]) + "," + str(spacings[counter]) + "," + str(greens[counter]) + "," + str(oranges[counter]) + "\n")
+            counter +=1
+
+
+#plot_points_types(make_bucket_2bot(0, 1, 1, 6))
+
+#Test 1, bucket 2 top, 4 buoys
+#RunTest(test_angles_buckets, test_spacings, 4, 1)
+#Test 2, bucket 2 top, 6 buoys
+#RunTest(test_angles_buckets, test_spacings, 6, 2)
+#Test 3, bucket 2 bottom, 6 buoys
+#RunTest(test_angles_buckets, test_spacings, 6, 3)
+#Test 4, 5 buoy chevron
+RunTest(test_angles_chevron, test_spacings, 7, 4)
+#Test 5, 7 buoy chevron
+#RunTest(test_angles_chevron, test_spacings, 7, 5)
+
+
+
+#plot_points_types(make_circles_H(26, 1, 1, 7), True)
+
+#plot_points_and_circles(make_bucket_2bot(-45, 10, 5, 4))
+
+#print(make_bucket_2top(90, 1, 1, 8))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#plot_points_types(make_circles_H(37,1,1,7))
+    
+#print(spacings)
+
+#plot_points_types(make_circles_H(80,1,1,5))
 
 #make_circles(90, 10, 10)
 #make_circles(60, 10, 10)
